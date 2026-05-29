@@ -2571,78 +2571,16 @@ def tool_delete_chat(chat_id: str) -> dict:
 
 def tool_update_model(model_id: str, capabilities: str = "", function_calling: str = "",
                       web_search: str = "", tools: str = "") -> dict:
-    """Update an OpenWebUI model by fetching current config, merging changes, delete+recreate."""
-    token = get_token()
+    """DISABLED — this tool corrupted the sloth-agent model config by nesting params inside meta.
 
-    # Get current model config
-    models_data = api("GET", "/api/models", token)
-    if "error" in models_data:
-        return models_data
-    current = None
-    for m in models_data.get("data", []):
-        if m.get("id") == model_id:
-            current = m
-            break
-    if not current:
-        return {"error": f"Model '{model_id}' not found"}
-
-    info = current.get("info", {}) or {}
-    meta = dict(info.get("meta", {}) or {})
-
-    # Merge capabilities
-    caps = dict(meta.get("capabilities") or {})
-    if capabilities:
-        for pair in capabilities.split(","):
-            k, v = pair.strip().split("=", 1)
-            caps[k.strip()] = v.strip().lower() == "true"
-    meta["capabilities"] = caps
-
-    # Merge features
-    feats = dict(meta.get("features") or {})
-    if web_search:
-        feats["web_search"] = web_search.lower() == "true"
-    if feats:
-        meta["features"] = feats
-
-    # Merge params
-    params = dict(meta.get("params") or {})
-    if function_calling:
-        params["function_calling"] = function_calling
-    if params:
-        meta["params"] = params
-
-    # Merge tools list
-    if tools:
-        meta["tools"] = [t.strip() for t in tools.split(",")]
-
-    # Delete old model (via GET filter + internal API)
-    # OpenWebUI doesn't have a clean delete endpoint for created models
-    # We need to hit the internal models table directly
-    del_result = api("GET", f"/api/v1/models/{model_id}/delete", token)
-    # If that fails, try brute force: recreate won't work if exists
-
-    # Try to recreate with merged config
-    create_body = {
-        "id": model_id,
-        "name": info.get("name", model_id),
-        "base_model_id": info.get("base_model_id", ""),
-        "meta": meta,
-        "params": meta.get("params", {}),
-    }
-    # Remove params from meta to avoid duplication (it's a top-level field too)
-    if "params" in meta:
-        create_body["params"] = meta["params"]
-
-    result = api("POST", "/api/v1/models/create", token, create_body)
-
-    if "error" in result and "already registered" in result["error"]:
-        return {
-            "error": f"Model '{model_id}' already exists. OpenWebUI doesn't support model deletion via API. "
-                     f"Delete it manually in the UI at http://192.168.0.33:3000/workspace/models then retry. "
-                     f"The merged config that would be applied: {json.dumps(meta, indent=2)[:500]}"
-        }
-
-    return {"updated": True, "model_id": model_id, "meta": meta, "api_response": result}
+    OpenWebUI has no proper model update API. Use DB-direct access instead:
+      ssh aaron@192.168.0.33 'docker exec -i open-webui python3'
+      import sqlite3, json; db = sqlite3.connect("/app/backend/data/webui.db")
+      # read/modify model rows directly, then db.commit()
+    """
+    return {"error": "tool_update_model is DISABLED — it corrupted model configs. "
+                     "Use DB-direct access via SSH to open-webui container. "
+                     "See MEMORY.md for correct DB structure."}
 
 
 def tool_get_config() -> dict:
