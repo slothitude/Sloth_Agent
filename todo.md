@@ -29,9 +29,11 @@
 - [x] **Chat auto-logging** — all chats saved to vault/chats/{user}/ with frontmatter
 - [x] **Smart system prompt** — includes recent chat context, session info, user identity
 - [x] **Multi-user** — admin account, isolated chats, shared vault
-- [x] **STT/TTS servers** — copied from voicebox (services/stt_server.py, services/tts_server_kokoro.py)
+- [x] **STT/TTS servers** — copied from voicebox, deployed to Lappy, running on :8006 (TTS) and :8007 (STT)
+- [x] **Voice tool** — registered on OpenWebUI (speech_to_text, text_to_speech, list_voices)
+- [x] **Git repo** — pushed to github.com/slothitude/Sloth_Agent, cloned on Lappy
 
-### Tools on sloth-agent (14 registered)
+### Tools on sloth-agent (15 registered)
 1. memory — Memory (built-in)
 2. git_tools — Git Tools (built-in)
 3. web_search — Web Search (built-in)
@@ -45,21 +47,23 @@
 11. knowledge_graph — graph_search, graph_stats, entity_graph, list_tags, list_spaces, list_conversations
 12. graph_visuals — mermaid_diagram, entity_network
 13. obsidian — vault_list, vault_read, vault_write, vault_search, vault_recent
-14. Agent Vault knowledge base — RAG indexed
+14. voice — speech_to_text, text_to_speech, list_voices
+15. Agent Vault knowledge base — RAG indexed
 
 ### MCP tool_ids sent in requests
-["alphabetty", "bash_tool", "file_system", "browser_control", "vision", "knowledge_graph", "graph_visuals", "obsidian"]
+["alphabetty", "bash_tool", "file_system", "browser_control", "vision", "knowledge_graph", "graph_visuals", "obsidian", "voice"]
 
 ---
 
 ## Phase 3 — Audit Deficiencies (from competitor comparison)
 
 ### HIGH Priority
-- [ ] **#15 Voice I/O** — STT (faster-whisper :8007) + TTS (kokoro-onnx :8006) as tools on sloth-agent
-  - STT server ready at `services/stt_server.py` — needs deployment to Lappy + tool registration
-  - TTS server ready at `services/tts_server_kokoro.py` — already running on Lappy :8006
-  - Need: OpenWebUI custom tool or MCP-side handler to proxy audio in/out
-  - Need: Frontend microphone button (OpenWebUI built-in supports this)
+- [x] **#15 Voice I/O** — STT (faster-whisper :8007) + TTS (kokoro-onnx :8006) deployed and running
+  - [x] Servers running on Lappy via scheduled tasks
+  - [x] OpenWebUI custom tool registered (speech_to_text, text_to_speech, list_voices)
+  - [x] MCP-side handlers in openwebui_mcp.py
+  - [ ] Configure OpenWebUI admin audio settings to point to STT/TTS
+  - [ ] Test end-to-end voice chat in OpenWebUI UI
 - [ ] **#16 Artifacts** — live code preview (HTML/React/SVG iframe sandbox)
   - OpenWebUI code blocks already render; need iframe sandbox for executable output
   - Reference: Claude Desktop Artifacts pattern
