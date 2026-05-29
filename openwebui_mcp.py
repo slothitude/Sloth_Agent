@@ -32,7 +32,7 @@ POLL_INTERVAL = 3
 MAX_POLL = 300
 
 # Alphabetty config
-ALPHABETTY_BASE = "http://localhost:7700"
+ALPHABETTY_BASE = "http://100.84.161.63:7700"
 ALPHABETTY_BOOTSTRAP = "alphabetty-bootstrap-secret"
 _alphabetty_key = None
 
