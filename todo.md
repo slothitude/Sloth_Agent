@@ -63,6 +63,8 @@
 ## Phase 3 — Audit Deficiencies (from competitor comparison)
 
 ### HIGH Priority
+- [ ] **#27 Fix empty response after tool calls** — MCP tool loop captures tool_calls but drops the final text chunk after all tools complete. Affects Telegram bridge too (returns "(empty response)"). Root cause: stream parser in openwebui_mcp.py stops after first response containing tool_calls with no delta.content, misses the final assistant message after tool execution.
+- [ ] **#28 Fix TTS/STT sampling rate + streaming audio** — Kokoro TTS (port 8006) and Whisper STT (port 8007) have sampling rate mismatches causing distorted audio or failed transcriptions. Audio proxy (port 8005) sample rate conversion pipeline needs audit. Partially-built streaming TTS (#21) was half-done and may be the root cause — need to finish chunked streaming (SSE/WebSocket) or revert to simple full-WAV approach if streaming was breaking sample rates.
 - [x] **#15 Voice I/O** — STT (faster-whisper :8007) + TTS (kokoro-onnx :8006) deployed and running
   - [x] Servers running on Lappy via scheduled tasks
   - [x] OpenWebUI custom tool registered (speech_to_text, text_to_speech, list_voices)
@@ -93,6 +95,7 @@
 - [ ] **#18 Computer Use (interactive screen)** — full GUI control beyond headless CDP
   - Alphabetty CDP does headless browser; need VNC/noVNC for desktop control
   - Reference: Claude Computer Use
+- [x] **#21 Streaming audio** — merged into #28
 - [x] **#19 Extended Thinking** — deep reasoning with chain-of-thought logging
   - thinking_log tool saves reasoning traces to vault/thinking/ with frontmatter
   - Available in CUSTOM_TOOL_SCHEMAS + MCP tool (openweb_thinking_log)
