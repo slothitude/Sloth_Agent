@@ -113,6 +113,13 @@
 - [ ] **#24 Moonlight game streaming** — serve games via Moonlight/Sunshine
   - Sunshine host on Lappy (GPU), Moonlight clients on LAN devices
   - Could integrate with sloth-agent for voice-controlled game launch
+- [ ] **#26 GodotStrap** — AI-to-Godot UI bridge (`C:\Users\aaron\Documents\godotstrap`)
+  - Docker stack: Bridge (Godot 4.6.3 + Xvfb) + Viewer (Python viewport capture) on port 7778
+  - Agent emits JSON component tree → Godot renders real Control nodes → interactive stream to browser
+  - Input proxy forwards browser clicks back to Godot engine
+  - Aero Design System (Glassmorphism, soft shadows, Tailwind palettes)
+  - OpenWebUI integration via artifact viewer
+  - Ref templates: Dashboard, System Monitor, Wizard
 
 ### Security / Ops (from Phase 1)
 - [x] **Security: restrict file_system** to safe directories (whitelist) — `FILE_SYSTEM_ROOTS` with path validation on read/write/edit
