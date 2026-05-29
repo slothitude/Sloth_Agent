@@ -21,14 +21,22 @@ import urllib.error
 
 class ProxyHandler(BaseHTTPRequestHandler):
 
+    def _normalize_path(self, path):
+        """Strip /v1 prefix so both /audio/speech and /v1/audio/speech work."""
+        path = path.split("?")[0]
+        if path.startswith("/v1"):
+            path = path[3:]
+        return path
+
     def do_GET(self):
-        if self.path == "/health":
+        path = self._normalize_path(self.path)
+        if path == "/health":
             self._json(200, {"status": "ok", "proxy": "openai-audio"})
-        elif self.path == "/models":
+        elif path == "/models":
             self._json(200, {"data": [{"id": "kokoro-v1.0"}]})
-        elif self.path == "/audio/models":
+        elif path == "/audio/models":
             self._json(200, {"data": [{"id": "kokoro-v1.0"}]})
-        elif self.path == "/audio/voices":
+        elif path == "/audio/voices":
             try:
                 req = urllib.request.Request(f"{TTS_URL}/voices")
                 resp = urllib.request.urlopen(req, timeout=5)
@@ -40,7 +48,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
             self._json(404, {"error": "not found"})
 
     def do_POST(self):
-        path = self.path.split("?")[0]
+        path = self._normalize_path(self.path)
         if path == "/audio/speech":
             self._handle_tts()
         elif path == "/audio/transcriptions":
