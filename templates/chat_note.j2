@@ -1,0 +1,31 @@
+---
+created: "{{ created }}"
+updated: "{{ updated }}"
+tags: [chat, {{ user_tag }}{% for tag in extra_tags %}, {{ tag }}{% endfor %}]
+user: "{{ user }}"
+model: "{{ model }}"
+chat_id: "{{ chat_id }}"
+tool_calls: [{{ tool_calls | join(', ') }}]
+message_count: {{ message_count }}
+---
+
+# {{ title }}
+
+> {{ user }} · {{ created }} · {{ model }}
+
+## Messages
+
+{% for msg in messages %}
+### {{ msg.role | title }}
+{{ msg.content }}
+
+{% endfor %}
+{% if sources %}
+## Sources
+{% for src in sources %}
+- [{{ src.name }}]({{ src.url }}){% endfor %}
+{% endif %}
+{% if tool_names %}
+## Tools Used
+{{ tool_names | join(', ') }}
+{% endif %}

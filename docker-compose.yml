@@ -1,0 +1,53 @@
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    volumes:
+      - open-webui-data:/app/backend/data
+    environment:
+      - WEBUI_NAME=SlothAI
+      - WEBUI_AUTH=true
+      - ENABLE_SIGNUP=true
+      - DATA_DIR=/app/backend/data
+      - ENABLE_WEB_SEARCH=true
+      - WEB_SEARCH_ENGINE=searxng
+      - SEARXNG_QUERY_URL=http://192.168.0.33:8888/search?q=<query>
+      - RAG_EMBEDDING_MODEL_AUTO_UPDATE=false
+      - RAG_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+      - OPENAI_API_BASE_URL=http://192.168.0.33:4000/v1
+      - OPENAI_API_KEY=sk-litellm-b15241627ba17201797f1446b25d82a9
+      - TERMINAL_SERVER_CONNECTIONS=[{"id":"lappy","name":"Lappy Terminal","url":"http://open-terminal:8000","enabled":true,"auth_type":"bearer","key":"a63a2a7ee2d5431d929c776122e3b706.hzHjrJlnfPd7cYfj"}]
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    networks:
+      - webui-net
+    depends_on:
+      - open-terminal
+
+  open-terminal:
+    image: ghcr.io/open-webui/open-terminal:latest
+    container_name: open-terminal
+    restart: unless-stopped
+    volumes:
+      - open-terminal:/home/user
+    environment:
+      - OPEN_TERMINAL_API_KEY=a63a2a7ee2d5431d929c776122e3b706.hzHjrJlnfPd7cYfj
+      - ANTHROPIC_API_KEY=a63a2a7ee2d5431d929c776122e3b706.hzHjrJlnfPd7cYfj
+      - ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic
+    networks:
+      - webui-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  open-webui-data:
+  open-terminal:
+
+networks:
+  webui-net:
+    driver: bridge

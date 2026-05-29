@@ -1,0 +1,12 @@
+{% if context_summary %}
+Context from previous conversation:
+{{ context_summary }}
+{% endif %}
+
+{% if vault_notes %}
+Relevant vault notes:
+{% for note in vault_notes %}
+### {{ note.path }}
+{{ note.content | truncate(300) }}
+{% endfor %}
+{% endif %}
