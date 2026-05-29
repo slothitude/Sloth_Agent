@@ -32,8 +32,10 @@
 - [x] **STT/TTS servers** — copied from voicebox, deployed to Lappy, running on :8006 (TTS) and :8007 (STT)
 - [x] **Voice tool** — registered on OpenWebUI (speech_to_text, text_to_speech, list_voices)
 - [x] **Git repo** — pushed to github.com/slothitude/Sloth_Agent, cloned on Lappy
+- [x] **HTTPS** — ai.retromonkey.com.au via Oracle Caddy + Tailscale + acme.sh (ZeroSSL cert)
+- [x] **OpenAI audio proxy** — port 8005, translates OpenAI format to Kokoro/Whisper
 
-### Tools on sloth-agent (15 registered)
+### Tools on sloth-agent (17 registered)
 1. memory — Memory (built-in)
 2. git_tools — Git Tools (built-in)
 3. web_search — Web Search (built-in)
@@ -48,10 +50,13 @@
 12. graph_visuals — mermaid_diagram, entity_network
 13. obsidian — vault_list, vault_read, vault_write, vault_search, vault_recent
 14. voice — speech_to_text, text_to_speech, list_voices
-15. Agent Vault knowledge base — RAG indexed
+15. artifacts — create_artifact, list_artifacts, update_artifact
+16. skills — skill_list, skill_load, skill_execute
+17. agents — agent_list, agent_load, agent_create, agent_delete, delegate_to (template-based)
+18. Agent Vault knowledge base — RAG indexed
 
 ### MCP tool_ids sent in requests
-["alphabetty", "bash_tool", "file_system", "browser_control", "vision", "knowledge_graph", "graph_visuals", "obsidian", "voice"]
+["alphabetty", "bash_tool", "file_system", "browser_control", "vision", "knowledge_graph", "graph_visuals", "obsidian", "voice", "artifacts", "skills"]
 
 ---
 
@@ -62,23 +67,35 @@
   - [x] Servers running on Lappy via scheduled tasks
   - [x] OpenWebUI custom tool registered (speech_to_text, text_to_speech, list_voices)
   - [x] MCP-side handlers in openwebui_mcp.py
-  - [ ] Configure OpenWebUI admin audio settings to point to STT/TTS
-  - [ ] Test end-to-end voice chat in OpenWebUI UI
-- [ ] **#16 Artifacts** — live code preview (HTML/React/SVG iframe sandbox)
-  - OpenWebUI code blocks already render; need iframe sandbox for executable output
-  - Reference: Claude Desktop Artifacts pattern
-- [ ] **#17 Skills system** — reusable prompt templates loadable on demand
-  - Vault-based: `vault/skills/*.md` with Jinja2 rendering
-  - Users can create/share skills via vault
-  - Need: skill_list, skill_load, skill_execute tools
+  - [x] Configure OpenWebUI admin audio settings to point to STT/TTS
+  - [x] Test end-to-end voice chat in OpenWebUI UI
+- [x] **#16 Artifacts** — sandboxed code preview (HTML/React/SVG/Mermaid/JS/CSS)
+  - [x] Artifact server on Lappy port 8012 (services/artifact_server.py)
+  - [x] Scheduled task Artifact-Server for persistence
+  - [x] OpenWebUI custom tool registered (create_artifact, list_artifacts, update_artifact)
+  - [x] MCP-side handlers in openwebui_mcp.py + MCP tools
+  - [x] System prompt updated with Artifacts instructions
+- [x] **#17 Skills system** — reusable prompt templates loadable on demand
+  - [x] Vault-based: `vault/skills/*.md` with Jinja2 rendering
+  - [x] 6 starter skills: landing-page, chart, form, email-draft, report, summarize
+  - [x] Users can create/share skills by writing .md files to vault/skills/
+  - [x] skill_list, skill_load, skill_execute tools registered
+  - [x] OpenWebUI custom tool registered + MCP tools
+- [x] **#25 Agent system** — template-based sub-agents with dynamic MCP tool generation
+  - [x] Vault-based: `vault/agents/*.md` with YAML frontmatter + Jinja2 system prompt
+  - [x] 3 starter agents: researcher, coder, writer
+  - [x] agent_list, agent_load, agent_create, agent_delete + delegate_to (template-first, AGENT_TOOLS fallback)
+  - [x] Dynamic MCP tools: `openweb_agent_{slug}` auto-generated per template
+  - [x] OpenWebUI custom tool registered + MCP tools
+  - [x] System prompt updated with agent builder docs
 
 ### MEDIUM Priority
 - [ ] **#18 Computer Use (interactive screen)** — full GUI control beyond headless CDP
   - Alphabetty CDP does headless browser; need VNC/noVNC for desktop control
   - Reference: Claude Computer Use
-- [ ] **#19 Extended Thinking** — deep reasoning with chain-of-thought logging
-  - System prompt already plans; add CoT logging to vault for transparency
-  - Need: thinking_log tool that saves reasoning traces
+- [x] **#19 Extended Thinking** — deep reasoning with chain-of-thought logging
+  - thinking_log tool saves reasoning traces to vault/thinking/ with frontmatter
+  - Available in CUSTOM_TOOL_SCHEMAS + MCP tool (openweb_thinking_log)
 - [ ] **#20 Multi-platform bridges** — Discord, Slack, Telegram, etc.
   - OpenWebUI has webhook support; n8n workflows as bridges
   - OpenClaw has 13+ platforms — we need at least Telegram bridge
@@ -93,13 +110,16 @@
 - [ ] **#23 Mobile app** — OpenWebUI is already responsive PWA
   - May just need PWA manifest + service worker tweaks
   - Voice I/O on mobile = killer feature
+- [ ] **#24 Moonlight game streaming** — serve games via Moonlight/Sunshine
+  - Sunshine host on Lappy (GPU), Moonlight clients on LAN devices
+  - Could integrate with sloth-agent for voice-controlled game launch
 
 ### Security / Ops (from Phase 1)
-- [ ] **Security: restrict file_system** to safe directories (whitelist)
-- [ ] **Security: sandbox bash** commands (blocklist dangerous commands)
-- [ ] **Performance: cache Alphabetty API key** (already cached in session)
+- [x] **Security: restrict file_system** to safe directories (whitelist) — `FILE_SYSTEM_ROOTS` with path validation on read/write/edit
+- [x] **Security: sandbox bash** commands (blocklist dangerous commands) — 16 blocked patterns (rm -rf /, mkfs, format, dd if=, etc.)
+- [x] **Performance: cache Alphabetty API key** (already cached in session via `_alphabetty_key`)
 - [ ] **Add more Alphabetty tools** (workflows, sign-in automation, macros)
-- [ ] **Mount vault folder into Docker** for direct OpenWebUI tool access
+- [ ] **Mount vault folder into Docker** — blocked: vault is on Rog, Docker on Lappy. Would need SMB mount or vault sync service first.
 - [ ] **Auto-sync vault to OpenWebUI RAG** knowledge base
 
 ### Audit Score Card (2026-05-29)
