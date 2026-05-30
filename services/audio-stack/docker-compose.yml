@@ -1,0 +1,30 @@
+version: "3.8"
+services:
+  audio-stack:
+    image: audio-stack:latest
+    container_name: audio-stack-v2
+    ports:
+      - "8005:8005"
+      - "8006:8006"
+      - "8007:8007"
+    volumes:
+      - C:/Users/aaron/hotswap/kokoro-models:/models/kokoro
+      - C:/Users/aaron/.cache/huggingface/hub:/root/.cache/huggingface
+    environment:
+      - WHISPER_DEVICE=cpu
+      - WHISPER_COMPUTE_TYPE=int8
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    networks:
+      - webui-net
+
+networks:
+  webui-net:
+    external: true
+    name: open-webui_webui-net
