@@ -99,9 +99,11 @@ Tools injected via `tools: CUSTOM_TOOL_SCHEMAS` in request body. External tool l
 - [x] **#19 Extended Thinking** — deep reasoning with chain-of-thought logging
   - thinking_log tool saves reasoning traces to vault/thinking/ with frontmatter
   - Available in CUSTOM_TOOL_SCHEMAS + MCP tool (openweb_thinking_log)
-- [ ] **#20 Multi-platform bridges** — Discord, Slack, Telegram, etc.
+- [x] **#20 Multi-platform bridges** — Discord, Slack, Telegram, etc.
   - OpenWebUI has webhook support; n8n workflows as bridges
-  - Telegram bridge deployed; retest after #27 fix
+  - Telegram bridge deployed: text-only, client-side tool loop (SearXNG, timestamp, URL fetch), conversation history maintained
+
+- [ ] **#29 Telegram remote via Socket.IO** — Connect Telegram bridge as a raw Socket.IO client to OpenWebUI's WebSocket. This would make Telegram a true remote (messages appear in both Telegram and OpenWebUI browser). Requires `python-socketio` client, JWT auth, and connecting to the same chat room the browser uses. Currently the bridge uses REST API with client-side tool loop — this works but is a separate session, not a shared remote.
 
 ### LOW Priority
 - [ ] **#22 Plugin marketplace** — community tool registry
