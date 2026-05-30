@@ -1523,7 +1523,12 @@ def stream_chat(token, body):
             },
             method="POST",
         )
-        resp = urllib.request.urlopen(req, timeout=MAX_POLL)
+        try:
+            resp = urllib.request.urlopen(req, timeout=MAX_POLL)
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode(errors="replace")[:200]
+            print(f"[loop {loop}] HTTPError {e.code}: {err_body}")
+            break
 
         content = ""
         reasoning = ""
@@ -1588,7 +1593,9 @@ def stream_chat(token, body):
         # Execute tool calls and build continuation messages
         messages = body.get("messages", [])
         # Add assistant message with tool calls
-        assistant_msg = {"role": "assistant", "content": content or None, "tool_calls": []}
+        assistant_msg = {"role": "assistant", "tool_calls": []}
+        if content:
+            assistant_msg["content"] = content
         for tc_id, tc_data in tool_calls_accum.items():
             assistant_msg["tool_calls"].append({
                 "id": tc_id,
@@ -1828,9 +1835,15 @@ def stream_chat(token, body):
                 "content": result,
             })
 
-        # Update body for next loop
-        body = dict(body)
-        body["messages"] = messages
+        # Update body for next loop — drop chat_id/session_id/id to prevent
+        # OpenWebUI from loading stale message history and merging with ours
+        body = {
+            "messages": messages,
+            "model": body.get("model"),
+            "stream": True,
+            "tools": body.get("tools"),
+            "features": body.get("features"),
+        }
 
     return all_content, all_reasoning, all_sources, all_tool_names
 
@@ -2440,8 +2453,12 @@ def tool_chat(message: str, chat_id: str = "", web_search: bool = True,
     # Render dynamic system prompt via Jinja2
     system_prompt = render_system_prompt(token)
 
+    # Always start a fresh chat — prevents stale message history from breaking
+    # LiteLLM when tool calls accumulate across requests
+    effective_chat_id = chat_id if chat_id else str(uuid.uuid4())
+
     body = {
-        "chat_id": chat_id,
+        "chat_id": effective_chat_id,
         "id": msg_id,
         "messages": [{"role": "user", "content": message}],
         "model": MODEL,
@@ -2449,7 +2466,6 @@ def tool_chat(message: str, chat_id: str = "", web_search: bool = True,
         "session_id": session_id,
         "system": system_prompt,
         "tools": CUSTOM_TOOL_SCHEMAS,
-        "tool_ids": ["alphabetty", "bash_tool", "file_system", "browser_control", "vision", "knowledge_graph", "graph_visuals", "obsidian", "voice", "artifacts", "skills"],
         "features": {
             "web_search": web_search,
         },

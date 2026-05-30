@@ -55,15 +55,15 @@
 17. agents — agent_list, agent_load, agent_create, agent_delete, delegate_to (template-based)
 18. Agent Vault knowledge base — RAG indexed
 
-### MCP tool_ids sent in requests
-["alphabetty", "bash_tool", "file_system", "browser_control", "vision", "knowledge_graph", "graph_visuals", "obsidian", "voice", "artifacts", "skills"]
+### Tool execution model
+Tools injected via `tools: CUSTOM_TOOL_SCHEMAS` in request body. External tool loop in `stream_chat()` executes on host (Rog) — OpenWebUI is pure passthrough to LiteLLM. `tool_ids` NOT used (caused double tool handling conflict).
 
 ---
 
 ## Phase 3 — Audit Deficiencies (from competitor comparison)
 
 ### HIGH Priority
-- [ ] **#27 Fix empty response after tool calls** — MCP tool loop captures tool_calls but drops the final text chunk after all tools complete. Affects Telegram bridge too (returns "(empty response)"). Root cause: stream parser in openwebui_mcp.py stops after first response containing tool_calls with no delta.content, misses the final assistant message after tool execution.
+- [x] **#27 Fix empty response after tool calls** — Removed `tool_ids` from requests (was causing double tool handling with OpenWebUI internal pipeline). Fixed assistant message content null rejection, chat_id logic inversion, and added HTTPError catch on continuations.
 - [ ] **#28 Fix TTS/STT sampling rate + streaming audio** — Kokoro TTS (port 8006) and Whisper STT (port 8007) have sampling rate mismatches causing distorted audio or failed transcriptions. Audio proxy (port 8005) sample rate conversion pipeline needs audit. Partially-built streaming TTS (#21) was half-done and may be the root cause — need to finish chunked streaming (SSE/WebSocket) or revert to simple full-WAV approach if streaming was breaking sample rates.
 - [x] **#15 Voice I/O** — STT (faster-whisper :8007) + TTS (kokoro-onnx :8006) deployed and running
   - [x] Servers running on Lappy via scheduled tasks
@@ -101,10 +101,7 @@
   - Available in CUSTOM_TOOL_SCHEMAS + MCP tool (openweb_thinking_log)
 - [ ] **#20 Multi-platform bridges** — Discord, Slack, Telegram, etc.
   - OpenWebUI has webhook support; n8n workflows as bridges
-  - OpenClaw has 13+ platforms — we need at least Telegram bridge
-- [ ] **#21 Streaming audio** — real-time TTS streaming (chunked response)
-  - Current TTS generates full WAV then returns; need chunked streaming for low latency
-  - WebSocket or SSE audio stream
+  - Telegram bridge deployed; retest after #27 fix
 
 ### LOW Priority
 - [ ] **#22 Plugin marketplace** — community tool registry
