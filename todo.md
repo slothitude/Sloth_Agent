@@ -64,7 +64,7 @@ Tools injected via `tools: CUSTOM_TOOL_SCHEMAS` in request body. External tool l
 
 ### HIGH Priority
 - [x] **#27 Fix empty response after tool calls** — Removed `tool_ids` from requests (was causing double tool handling with OpenWebUI internal pipeline). Fixed assistant message content null rejection, chat_id logic inversion, and added HTTPError catch on continuations.
-- [ ] **#28 Fix TTS/STT sampling rate + streaming audio** — Kokoro TTS (port 8006) and Whisper STT (port 8007) have sampling rate mismatches causing distorted audio or failed transcriptions. Audio proxy (port 8005) sample rate conversion pipeline needs audit. Partially-built streaming TTS (#21) was half-done and may be the root cause — need to finish chunked streaming (SSE/WebSocket) or revert to simple full-WAV approach if streaming was breaking sample rates.
+- [x] **#28 Fix TTS/STT sampling rate + streaming audio** — Audited pipeline: Kokoro outputs 24000Hz 16-bit mono PCM (correct, matches OpenAI standard), Whisper transcribes correctly, audio proxy is clean passthrough. No sampling rate conversion needed. Tested end-to-end from Rog: TTS plays, STT transcribes. Simple WAV approach works fine.
 - [x] **#15 Voice I/O** — STT (faster-whisper :8007) + TTS (kokoro-onnx :8006) deployed and running
   - [x] Servers running on Lappy via scheduled tasks
   - [x] OpenWebUI custom tool registered (speech_to_text, text_to_speech, list_voices)
