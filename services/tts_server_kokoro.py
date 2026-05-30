@@ -19,8 +19,11 @@ MODEL_DIR = r"C:\Users\aaron\hotswap\kokoro-models"
 ONNX_PATH = os.path.join(MODEL_DIR, "kokoro-v1.0.onnx")
 VOICES_PATH = os.path.join(MODEL_DIR, "voices-v1.0.bin")
 
+import re
+import numpy as np
 import soundfile as sf
 from kokoro_onnx import Kokoro
+from kokoro_onnx.config import MAX_PHONEME_LENGTH
 
 print(f"Loading Kokoro TTS model...", flush=True)
 kokoro = Kokoro(ONNX_PATH, VOICES_PATH)
@@ -33,6 +36,69 @@ VOICES = [
     "bm_george", "bm_lewis",
     "ff_siwis",
 ]
+
+# ~250 chars per chunk keeps us well under MAX_PHONEME_LENGTH (510 tokens)
+CHUNK_MAX_CHARS = 250
+# 0.15s silence between chunks at 24kHz = 3600 samples
+PAUSE_SAMPLES = 3600
+
+
+def _split_sentences(text):
+    """Split text into sentence-aligned chunks under CHUNK_MAX_CHARS."""
+    # Split on sentence-ending punctuation, keeping the delimiter with the sentence
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    chunks = []
+    current = ""
+    for s in sentences:
+        if not s.strip():
+            continue
+        if len(current) + len(s) + 1 <= CHUNK_MAX_CHARS:
+            current = (current + " " + s).strip() if current else s.strip()
+        else:
+            if current:
+                chunks.append(current)
+            # If a single sentence exceeds limit, force-split on commas/spaces
+            if len(s) > CHUNK_MAX_CHARS:
+                words = s.split()
+                current = ""
+                for w in words:
+                    if len(current) + len(w) + 1 <= CHUNK_MAX_CHARS:
+                        current = (current + " " + w).strip() if current else w
+                    else:
+                        if current:
+                            chunks.append(current)
+                        current = w
+            else:
+                current = s.strip()
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def _generate_with_chunking(text, voice, speed, lang):
+    """Generate audio with explicit sentence-level chunking + pause padding.
+
+    Bypasses Kokoro's internal auto-batch concatenation which has aggressive
+    silence trimming that can cut off audio on long text.
+    """
+    chunks = _split_sentences(text)
+    if len(chunks) == 1:
+        # Short text — no chunking needed
+        return kokoro.create(chunks[0], voice=voice, speed=speed, lang=lang)
+
+    all_samples = []
+    sample_rate = None
+    pause = np.zeros(PAUSE_SAMPLES, dtype=np.float32)
+
+    for i, chunk in enumerate(chunks):
+        samples, sr = kokoro.create(chunk, voice=voice, speed=speed, lang=lang)
+        if sample_rate is None:
+            sample_rate = sr
+        all_samples.append(samples)
+        if i < len(chunks) - 1:
+            all_samples.append(pause)
+
+    return np.concatenate(all_samples), sample_rate
 
 
 class TTSHandler(BaseHTTPRequestHandler):
@@ -75,7 +141,7 @@ class TTSHandler(BaseHTTPRequestHandler):
         try:
             import time as _time
             t0 = _time.time()
-            samples, sample_rate = kokoro.create(
+            samples, sample_rate = _generate_with_chunking(
                 text, voice=voice, speed=speed, lang=lang
             )
             t1 = _time.time()
