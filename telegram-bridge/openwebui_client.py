@@ -76,8 +76,8 @@ def _execute_tool(name: str, args: dict) -> str:
     return json.dumps({"error": f"tool {name} not available"})
 
 
-def send_chat(message: str, chat_id: str = None):
-    """Send message to sloth-agent with tool loop, return (text, chat_id).
+def send_chat(message_history: list, chat_id: str = None):
+    """Send message history to sloth-agent with tool loop, return (text, chat_id).
 
     Implements client-side tool execution: when the model returns tool_calls,
     executes them locally and feeds results back. Loops until final text.
@@ -86,7 +86,7 @@ def send_chat(message: str, chat_id: str = None):
     if not chat_id:
         chat_id = str(uuid.uuid4())
 
-    messages = [{"role": "user", "content": message}]
+    messages = list(message_history)
     url = f"{config.OPENWEBUI_BASE_URL}/api/chat/completions"
     hdrs = _headers()
 

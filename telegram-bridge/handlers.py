@@ -47,15 +47,25 @@ def _strip_markdown(text: str) -> str:
 
 
 async def _send_agent_reply(update: Update, context: ContextTypes.DEFAULT_TYPE, message: str):
-    """Send message to sloth-agent, reply with text."""
+    """Send message to sloth-agent with full conversation history, reply with text."""
     user_id = update.effective_user.id
-    chat_id = sessions.get_chat_id(user_id)
+    session = sessions.get_session(user_id)
+
+    # Append user message to history
+    session["messages"].append({"role": "user", "content": message})
 
     await update.effective_chat.send_chat_action("typing")
 
     try:
-        reply_text, real_chat_id = openwebui_client.send_chat(message, chat_id=chat_id)
-        sessions.set_chat_id(user_id, real_chat_id)
+        reply_text, chat_id = openwebui_client.send_chat(
+            message_history=session["messages"],
+            chat_id=session["chat_id"],
+        )
+        session["chat_id"] = chat_id
+
+        # Append assistant response to history for next turn
+        session["messages"].append({"role": "assistant", "content": reply_text})
+
     except Exception as e:
         await update.message.reply_text(f"Error: {e}")
         return
@@ -97,8 +107,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def cmd_reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    sessions.clear(user_id)
+    sessions.clear(update.effective_user.id)
     await update.message.reply_text("Conversation reset.")
 
 
