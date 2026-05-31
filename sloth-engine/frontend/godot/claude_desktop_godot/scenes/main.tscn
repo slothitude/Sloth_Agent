@@ -1,0 +1,443 @@
+[gd_scene load_steps=4 format=3 uid="uid://main_scene"]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/chat_message.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/sidebar.gd" id="3"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.102, 0.102, 0.102, 1.0)
+
+[node name="AppLayout" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 0
+
+[node name="Sidebar" type="Panel" parent="AppLayout"]
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SidebarBg" type="ColorRect" parent="AppLayout/Sidebar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.09, 0.09, 0.09, 1.0)
+
+[node name="SidebarBorder" type="ColorRect" parent="AppLayout/Sidebar"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_top = 0.0
+anchor_bottom = 1.0
+offset_left = -1.0
+color = Color(0.2, 0.2, 0.2, 1.0)
+
+[node name="SidebarContent" type="VBoxContainer" parent="AppLayout/Sidebar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 0
+script = ExtResource("3")
+
+[node name="SidebarHeader" type="VBoxContainer" parent="AppLayout/Sidebar/SidebarContent"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="LogoRow" type="HBoxContainer" parent="AppLayout/Sidebar/SidebarContent/SidebarHeader"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 56)
+theme_override_constants/separation = 8
+theme_override_constants/margin_left = 16
+
+[node name="MarginContainer" type="MarginContainer" parent="AppLayout/Sidebar/SidebarContent/SidebarHeader/LogoRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 0
+
+[node name="LogoHBox" type="HBoxContainer" parent="AppLayout/Sidebar/SidebarContent/SidebarHeader/LogoRow/MarginContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 8
+
+[node name="ClaudeLogo" type="Control" parent="AppLayout/Sidebar/SidebarContent/SidebarHeader/LogoRow/MarginContainer/LogoHBox"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="ClaudeWordmark" type="Label" parent="AppLayout/Sidebar/SidebarContent/SidebarHeader/LogoRow/MarginContainer/LogoHBox"]
+layout_mode = 2
+size_flags_vertical = 4
+text = "Claude"
+theme_override_font_sizes/font_size = 17
+theme_override_colors/font_color = Color(0.925, 0.925, 0.925, 1)
+
+[node name="NewChatBtn" type="Button" parent="AppLayout/Sidebar/SidebarContent/SidebarHeader"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 36)
+text = ""
+flat = true
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+
+[node name="NewChatMargin" type="MarginContainer" parent="AppLayout/Sidebar/SidebarContent/SidebarHeader"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="NewChatInner" type="HBoxContainer" parent="AppLayout/Sidebar/SidebarContent/SidebarHeader/NewChatMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="NewChatIcon" type="Label" parent="AppLayout/Sidebar/SidebarContent/SidebarHeader/NewChatMargin/NewChatInner"]
+layout_mode = 2
+text = "+"
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+
+[node name="NewChatLabel" type="Label" parent="AppLayout/Sidebar/SidebarContent/SidebarHeader/NewChatMargin/NewChatInner"]
+layout_mode = 2
+text = "New chat"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+
+[node name="SearchMargin" type="MarginContainer" parent="AppLayout/Sidebar/SidebarContent/SidebarHeader"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_bottom = 8
+
+[node name="SearchBox" type="LineEdit" parent="AppLayout/Sidebar/SidebarContent/SidebarHeader/SearchMargin"]
+layout_mode = 2
+placeholder_text = "Search chats..."
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_colors/font_placeholder_color = Color(0.42, 0.42, 0.42, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="HistorySeparatorLabel" type="Label" parent="AppLayout/Sidebar/SidebarContent"]
+layout_mode = 2
+text = "Recent"
+theme_override_colors/font_color = Color(0.42, 0.42, 0.42, 1)
+theme_override_font_sizes/font_size = 11
+theme_override_constants/margin_left = 16
+
+[node name="HistoryMargin" type="MarginContainer" parent="AppLayout/Sidebar/SidebarContent"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 0
+
+[node name="HistoryScroll" type="ScrollContainer" parent="AppLayout/Sidebar/SidebarContent/HistoryMargin"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ConversationList" type="VBoxContainer" parent="AppLayout/Sidebar/SidebarContent/HistoryMargin/HistoryScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="SidebarFooter" type="VBoxContainer" parent="AppLayout/Sidebar/SidebarContent"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="FooterDivider" type="ColorRect" parent="AppLayout/Sidebar/SidebarContent/SidebarFooter"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 1)
+color = Color(0.2, 0.2, 0.2, 1.0)
+
+[node name="ProfileRow" type="HBoxContainer" parent="AppLayout/Sidebar/SidebarContent/SidebarFooter"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+theme_override_constants/separation = 10
+
+[node name="ProfileMargin" type="MarginContainer" parent="AppLayout/Sidebar/SidebarContent/SidebarFooter/ProfileRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 0
+
+[node name="ProfileHBox" type="HBoxContainer" parent="AppLayout/Sidebar/SidebarContent/SidebarFooter/ProfileRow/ProfileMargin"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 10
+
+[node name="Avatar" type="Control" parent="AppLayout/Sidebar/SidebarContent/SidebarFooter/ProfileRow/ProfileMargin/ProfileHBox"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="ProfileInfo" type="VBoxContainer" parent="AppLayout/Sidebar/SidebarContent/SidebarFooter/ProfileRow/ProfileMargin/ProfileHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+
+[node name="ProfileName" type="Label" parent="AppLayout/Sidebar/SidebarContent/SidebarFooter/ProfileRow/ProfileMargin/ProfileHBox/ProfileInfo"]
+layout_mode = 2
+text = "Aaron King"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
+
+[node name="PlanLabel" type="Label" parent="AppLayout/Sidebar/SidebarContent/SidebarFooter/ProfileRow/ProfileMargin/ProfileHBox/ProfileInfo"]
+layout_mode = 2
+text = "Pro"
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.42, 0.42, 0.42, 1)
+
+; ─────────────────────────────────────────────────────────────────
+; MAIN CHAT AREA
+; ─────────────────────────────────────────────────────────────────
+
+[node name="ChatArea" type="VBoxContainer" parent="AppLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="ChatBg" type="ColorRect" parent="AppLayout/ChatArea"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.102, 0.102, 0.102, 1.0)
+
+[node name="TopBar" type="HBoxContainer" parent="AppLayout/ChatArea"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+theme_override_constants/separation = 8
+
+[node name="TopBarBg" type="ColorRect" parent="AppLayout/ChatArea/TopBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.102, 0.102, 0.102, 1.0)
+
+[node name="TopBarDivider" type="ColorRect" parent="AppLayout/ChatArea/TopBar"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.0
+anchor_right = 1.0
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -1.0
+color = Color(0.2, 0.2, 0.2, 0.6)
+
+[node name="TopBarMargin" type="MarginContainer" parent="AppLayout/ChatArea/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_right = 20
+
+[node name="TopBarInner" type="HBoxContainer" parent="AppLayout/ChatArea/TopBar/TopBarMargin"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 8
+
+[node name="ModelSelector" type="HBoxContainer" parent="AppLayout/ChatArea/TopBar/TopBarMargin/TopBarInner"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 6
+
+[node name="ModelDot" type="Control" parent="AppLayout/ChatArea/TopBar/TopBarMargin/TopBarInner/ModelSelector"]
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="ModelName" type="Label" parent="AppLayout/ChatArea/TopBar/TopBarMargin/TopBarInner/ModelSelector"]
+layout_mode = 2
+size_flags_vertical = 4
+text = "Claude Sonnet 4"
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
+
+[node name="ModelCaret" type="Label" parent="AppLayout/ChatArea/TopBar/TopBarMargin/TopBarInner/ModelSelector"]
+layout_mode = 2
+size_flags_vertical = 4
+text = "▾"
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="TopBarSpacer" type="Control" parent="AppLayout/ChatArea/TopBar/TopBarMargin/TopBarInner"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StylesBtn" type="Button" parent="AppLayout/ChatArea/TopBar/TopBarMargin/TopBarInner"]
+layout_mode = 2
+size_flags_vertical = 4
+text = "Styles"
+flat = true
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
+
+; ─── Message Scroll Area ──────────────────────────────────────────
+
+[node name="MessageScrollContainer" type="ScrollContainer" parent="AppLayout/ChatArea"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MessageList" type="VBoxContainer" parent="AppLayout/ChatArea/MessageScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+; ─── Welcome Screen (shown when no messages) ──────────────────────
+
+[node name="WelcomeScreen" type="CenterContainer" parent="AppLayout/ChatArea/MessageScrollContainer/MessageList"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 500)
+
+[node name="WelcomeVBox" type="VBoxContainer" parent="AppLayout/ChatArea/MessageScrollContainer/MessageList/WelcomeScreen"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="WelcomeLogo" type="Control" parent="AppLayout/ChatArea/MessageScrollContainer/MessageList/WelcomeScreen/WelcomeVBox"]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="WelcomeTitle" type="Label" parent="AppLayout/ChatArea/MessageScrollContainer/MessageList/WelcomeScreen/WelcomeVBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Good evening, Aaron"
+theme_override_font_sizes/font_size = 28
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
+horizontal_alignment = 1
+
+[node name="WelcomeSubtitle" type="Label" parent="AppLayout/ChatArea/MessageScrollContainer/MessageList/WelcomeScreen/WelcomeVBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "How can I help you today?"
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.42, 0.42, 0.42, 1)
+horizontal_alignment = 1
+
+[node name="SuggestionsGrid" type="GridContainer" parent="AppLayout/ChatArea/MessageScrollContainer/MessageList/WelcomeScreen/WelcomeVBox"]
+layout_mode = 2
+columns = 2
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+
+; ─── Input Area ───────────────────────────────────────────────────
+
+[node name="InputArea" type="VBoxContainer" parent="AppLayout/ChatArea"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="InputDivider" type="ColorRect" parent="AppLayout/ChatArea/InputArea"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 1)
+color = Color(0.2, 0.2, 0.2, 0.4)
+
+[node name="InputMargin" type="MarginContainer" parent="AppLayout/ChatArea/InputArea"]
+layout_mode = 2
+theme_override_constants/margin_left = 160
+theme_override_constants/margin_right = 160
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_bottom = 16
+
+[node name="InputBox" type="PanelContainer" parent="AppLayout/ChatArea/InputArea/InputMargin"]
+layout_mode = 2
+
+[node name="InputBoxInner" type="VBoxContainer" parent="AppLayout/ChatArea/InputArea/InputMargin/InputBox"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="TextInputMargin" type="MarginContainer" parent="AppLayout/ChatArea/InputArea/InputMargin/InputBox/InputBoxInner"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_bottom = 8
+
+[node name="MessageInput" type="TextEdit" parent="AppLayout/ChatArea/InputArea/InputMargin/InputBox/InputBoxInner/TextInputMargin"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 24)
+placeholder_text = "How can Claude help you today?"
+scroll_fit_content_height = true
+context_menu_enabled = false
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
+theme_override_colors/font_placeholder_color = Color(0.38, 0.38, 0.38, 1)
+theme_override_font_sizes/font_size = 15
+
+[node name="InputToolbar" type="HBoxContainer" parent="AppLayout/ChatArea/InputArea/InputMargin/InputBox/InputBoxInner"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 44)
+theme_override_constants/separation = 6
+
+[node name="ToolbarMargin" type="MarginContainer" parent="AppLayout/ChatArea/InputArea/InputMargin/InputBox/InputBoxInner/InputToolbar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_bottom = 8
+
+[node name="ToolbarHBox" type="HBoxContainer" parent="AppLayout/ChatArea/InputArea/InputMargin/InputBox/InputBoxInner/InputToolbar/ToolbarMargin"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 6
+
+[node name="AttachBtn" type="Button" parent="AppLayout/ChatArea/InputArea/InputMargin/InputBox/InputBoxInner/InputToolbar/ToolbarMargin/ToolbarHBox"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_vertical = 4
+text = "⊕"
+flat = true
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.42, 0.42, 0.42, 1)
+
+[node name="ToolbarSpacer" type="Control" parent="AppLayout/ChatArea/InputArea/InputMargin/InputBox/InputBoxInner/InputToolbar/ToolbarMargin/ToolbarHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ModelChip" type="HBoxContainer" parent="AppLayout/ChatArea/InputArea/InputMargin/InputBox/InputBoxInner/InputToolbar/ToolbarMargin/ToolbarHBox"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 4
+
+[node name="ModelChipLabel" type="Label" parent="AppLayout/ChatArea/InputArea/InputMargin/InputBox/InputBoxInner/InputToolbar/ToolbarMargin/ToolbarHBox/ModelChip"]
+layout_mode = 2
+size_flags_vertical = 4
+text = "Sonnet 4"
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.42, 0.42, 0.42, 1)
+
+[node name="SendBtn" type="Button" parent="AppLayout/ChatArea/InputArea/InputMargin/InputBox/InputBoxInner/InputToolbar/ToolbarMargin/ToolbarHBox"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_vertical = 4
+text = "↑"
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.07, 0.07, 0.07, 1)
+
+[node name="FooterNote" type="Label" parent="AppLayout/ChatArea/InputArea"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Claude can make mistakes. Please double-check responses."
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.32, 0.32, 0.32, 1)
+horizontal_alignment = 1

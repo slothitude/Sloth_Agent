@@ -1,0 +1,15 @@
+[gd_resource type="Theme" load_steps=12 format=3 uid="uid://claude_theme"]
+
+[resource]
+default_font_size = 14
+
+; ─── Claude Desktop Palette ───────────────────────────────────────
+; Background:       #1a1a1a  (main bg)
+; Sidebar:          #171717  (sidebar panel)
+; Surface:          #212121  (chat area bg)
+; Surface elevated: #2a2a2a  (message bubbles, inputs)
+; Border:           #333333
+; Accent orange:    #da7756  (Claude brand)
+; Text primary:     #ececec
+; Text secondary:   #9b9b9b
+; Text muted:       #6b6b6b

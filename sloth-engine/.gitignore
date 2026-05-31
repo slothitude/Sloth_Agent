@@ -1,0 +1,28 @@
+# Runtime data
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Environment / secrets
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Frontend build artifacts
+frontend/godot/claude_desktop_godot/.godot/
+frontend/godot-export/
