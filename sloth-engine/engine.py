@@ -66,7 +66,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Sloth Engine", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Sloth Engine", version="1.1.0", lifespan=lifespan)
 
 # ── Rate limiting ─────────────────────────────────────────────────────────
 _auth_attempts: dict[str, list[float]] = defaultdict(list)
@@ -420,7 +420,7 @@ async def api_models():
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "1.0.0"}
+    return {"status": "ok", "version": "1.1.0"}
 
 
 @app.post("/api/heartbeat")
