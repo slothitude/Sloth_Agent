@@ -8,18 +8,21 @@ from __future__ import annotations
 import base64
 import json
 import os
+import ipaddress
 import re
+import socket
 import subprocess
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+from threading import Lock
 
 import jinja2
 
 from config import (
-    ALLOWED_ROOTS, ARTIFACT_BASE, AUDIO_BASE, BASH_BLOCKLIST,
+    ALLOWED_ROOTS, ARTIFACT_BASE, AUDIO_BASE, BASH_DANGEROUS_PATTERNS,
     SEARXNG_URL, STT_BASE, VAULT_DIR,
 )
 from godotstrap_client import (
@@ -30,13 +33,15 @@ from godotstrap_client import (
 _HERE = Path(__file__).parent
 _VAULT_ROOT = str(VAULT_DIR)
 _session_key: str | None = None
+_session_key_time: float = 0
+_SESSION_KEY_TTL = 1800  # 30 minutes
 
-# Jinja2 envs
-_skills_env = jinja2.Environment(
+# Jinja2 envs (sandboxed to prevent SSTI)
+_skills_env = jinja2.sandbox.SandboxedEnvironment(
     loader=jinja2.FileSystemLoader(str(VAULT_DIR / "skills")),
     autoescape=False, trim_blocks=True, lstrip_blocks=True,
 )
-_agents_env = jinja2.Environment(
+_agents_env = jinja2.sandbox.SandboxedEnvironment(
     loader=jinja2.FileSystemLoader(str(VAULT_DIR / "agents")),
     autoescape=False, trim_blocks=True, lstrip_blocks=True,
 )
@@ -47,10 +52,16 @@ _agents_env = jinja2.Environment(
 # ═══════════════════════════════════════════════════════════════════════════
 
 def _fs_safe(path: str) -> tuple[bool, str]:
-    """Check if a path is within allowed roots. Requires path to be UNDER a root."""
-    p = os.path.normpath(path.replace("\\", "/"))
+    """Check if a path is within allowed roots. Uses realpath to prevent symlink traversal."""
+    try:
+        p = os.path.realpath(path)
+    except (OSError, ValueError):
+        return False, path
     for root in ALLOWED_ROOTS:
-        r = os.path.normpath(root)
+        try:
+            r = os.path.realpath(root)
+        except (OSError, ValueError):
+            continue
         # Path must start with root + separator (or be exactly root)
         if p == r or p.startswith(r + os.sep):
             return True, p
@@ -58,8 +69,12 @@ def _fs_safe(path: str) -> tuple[bool, str]:
 
 
 def _vault_safe(path: str) -> str | None:
-    full = os.path.normpath(os.path.join(_VAULT_ROOT, path.lstrip("/")))
-    if not full.startswith(os.path.normpath(_VAULT_ROOT)):
+    try:
+        full = os.path.realpath(os.path.join(_VAULT_ROOT, path.lstrip("/")))
+        root = os.path.realpath(_VAULT_ROOT)
+    except (OSError, ValueError):
+        return None
+    if not full.startswith(root + os.sep) and full != root:
         return None
     return full
 
@@ -81,9 +96,9 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
 
 
 def _get_session_key_sync() -> str:
-    """Get or acquire Alphabetty session key (sync, using urllib)."""
-    global _session_key
-    if _session_key:
+    """Get or acquire Alphabetty session key (sync, using urllib). Refreshes after TTL."""
+    global _session_key, _session_key_time
+    if _session_key and (time.time() - _session_key_time) < _SESSION_KEY_TTL:
         return _session_key
     from config import ALPHABETTY_BOOTSTRAP, ALPHABETTY_BASE
     req = urllib.request.Request(
@@ -101,6 +116,7 @@ def _get_session_key_sync() -> str:
                 break
     if not _session_key:
         raise RuntimeError(f"Cannot extract session key from Alphabetty: {data}")
+    _session_key_time = time.time()
     return _session_key
 
 
@@ -174,7 +190,45 @@ def execute_search_web(query: str) -> str:
         return f"Search error: {e}"
 
 
+_PRIVATE_PREFIXES = (
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("169.254.0.0/16"),
+    ipaddress.ip_network("::1/128"),
+    ipaddress.ip_network("fc00::/7"),
+    ipaddress.ip_network("fe80::/10"),
+    ipaddress.ip_network("0.0.0.0/8"),
+)
+
+
+def _is_safe_url(url: str) -> bool:
+    """Block SSRF: reject private/internal IPs and non-HTTP schemes."""
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return False
+    hostname = parsed.hostname
+    if not hostname:
+        return False
+    # Block localhost variants
+    if hostname in ("localhost", "localhost.localdomain") or hostname.endswith(".local"):
+        return False
+    try:
+        addrs = socket.getaddrinfo(hostname, parsed.port or (443 if parsed.scheme == "https" else 80))
+        for family, _, _, _, sockaddr in addrs:
+            ip = ipaddress.ip_address(sockaddr[0])
+            for network in _PRIVATE_PREFIXES:
+                if ip in network:
+                    return False
+    except socket.gaierror:
+        return False
+    return True
+
+
 def execute_fetch_url(url: str) -> str:
+    if not _is_safe_url(url):
+        return "Error: URL blocked (private/internal address or invalid scheme)"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         resp = urllib.request.urlopen(req, timeout=15)
@@ -214,15 +268,14 @@ def execute_ask_ai(query: str, mode: str = "concise", search_enabled: bool = Tru
 # ═══════════════════════════════════════════════════════════════════════════
 
 def execute_bash(command: str, host: str = "local") -> str:
-    cmd_lower = command.lower().strip()
-    for pat in BASH_BLOCKLIST:
-        if pat in cmd_lower:
-            return f"Error: Command blocked (matched '{pat}')"
+    for pat in BASH_DANGEROUS_PATTERNS:
+        if re.search(pat, command, re.IGNORECASE):
+            return f"Error: Command blocked (matched dangerous pattern)"
     timeout = 120
     try:
         if host == "lappy":
             proc = subprocess.run(
-                ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=5",
+                ["ssh", "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=5",
                  "aaron@192.168.0.33", command],
                 capture_output=True, text=True, timeout=timeout,
             )
@@ -292,7 +345,9 @@ def execute_edit_file(path: str, old_text: str, new_text: str) -> str:
         return f"Error: {e}"
 
 
-def execute_list_directory(path: str) -> str:
+def execute_list_directory(path: str = "") -> str:
+    if not path:
+        return "Error: path is required (no default directory listing)"
     try:
         safe, p = _fs_safe(path)
         if not safe:
@@ -537,20 +592,23 @@ def execute_vault_search(query: str, max_results: int = 10) -> str:
 
 _ARTIFACT_DIR = _HERE / "data" / "artifacts"
 _ARTIFACT_INDEX = _ARTIFACT_DIR / "index.json"
+_artifact_lock = Lock()
 
 
 def _load_artifact_index() -> dict:
-    if _ARTIFACT_INDEX.exists():
-        try:
-            return json.loads(_ARTIFACT_INDEX.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return {}
+    with _artifact_lock:
+        if _ARTIFACT_INDEX.exists():
+            try:
+                return json.loads(_ARTIFACT_INDEX.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        return {}
 
 
 def _save_artifact_index(idx: dict):
-    _ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-    _ARTIFACT_INDEX.write_text(json.dumps(idx, indent=2), encoding="utf-8")
+    with _artifact_lock:
+        _ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+        _ARTIFACT_INDEX.write_text(json.dumps(idx, indent=2), encoding="utf-8")
 
 
 def execute_create_artifact(title: str, source: str, type: str = "html") -> str:
@@ -796,11 +854,14 @@ def execute_delegate_to(agent_id: str, message: str) -> str:
         return content
 
     try:
-        loop = asyncio.get_event_loop()
+        # Check if there's already a running loop (e.g. inside FastAPI)
+        loop = asyncio.get_running_loop()
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            result = pool.submit(asyncio.run, _run()).result(timeout=120)
     except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    result = loop.run_until_complete(_run())
+        # No running loop — safe to use asyncio.run
+        result = asyncio.run(_run())
     return result[:8000] if result else f"Agent '{agent_id}' returned empty."
 
 

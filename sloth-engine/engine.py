@@ -4,15 +4,19 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sqlite3
+import time
+from collections import defaultdict
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Depends, HTTPException, Query
+from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
-from config import HOST, PORT, DEBUG, DEFAULT_MODEL, FRONTEND_DIR, DB_PATH, ZAI_API_KEY, DATA_DIR
+from config import HOST, PORT, DEBUG, DEFAULT_MODEL, FRONTEND_DIR, DB_PATH, DATA_DIR
 from models import ChatRequest, ProjectCreate, TokenRequest, TokenResponse
 from auth import init_auth_db, get_current_user, create_user, verify_token
 from chat_store import (
@@ -26,7 +30,34 @@ from zai_client import chat_with_tools
 
 # ── App ────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="Sloth Engine", version="1.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
+    init_auth_db()
+    init_db()
+    # Create default admin user if no users exist
+    if _count_users() == 0:
+        admin_pw = os.getenv("SLOTH_ADMIN_PASSWORD", "")
+        if not admin_pw:
+            import secrets
+            admin_pw = secrets.token_urlsafe(24)
+            print(f"╔══════════════════════════════════════════════════════╗")
+            print(f"║  ADMIN TOKEN (save this — not shown again):        ║")
+            print(f"║  {admin_pw:<52s}║")
+            print(f"╚══════════════════════════════════════════════════════╝")
+        try:
+            create_user("admin", admin_pw, "Admin")
+        except ValueError:
+            pass
+    yield
+
+
+app = FastAPI(title="Sloth Engine", version="1.0.0", lifespan=lifespan)
+
+# ── Rate limiting ─────────────────────────────────────────────────────────
+_auth_attempts: dict[str, list[float]] = defaultdict(list)
+_MAX_AUTH_ATTEMPTS = 10
+_AUTH_WINDOW = 300  # seconds
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,19 +68,20 @@ app.add_middleware(
 )
 
 
-# ── Startup ────────────────────────────────────────────────────────────────
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
+        "img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; "
+        "frame-src 'self'; connect-src 'self'; media-src 'self' blob:"
+    )
+    return response
 
-@app.on_event("startup")
-def startup():
-    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
-    init_auth_db()
-    init_db()
-    # Create default admin user if no API key set
-    if not Path(DB_PATH).exists() or _count_users() == 0:
-        try:
-            create_user("admin", "sloth-engine-admin-token", "Admin")
-        except ValueError:
-            pass
+
+# ── Static Files ────────────────────────────────────────────────────────────
 
 
 def _count_users() -> int:
@@ -101,6 +133,14 @@ app.mount("/api/artifacts", _StaticFiles(directory=str(_artifacts_dir), check_di
 
 @app.post("/api/auth/token", response_model=TokenResponse)
 async def create_token(req: TokenRequest):
+    # Rate limit: max N attempts per window per email
+    key = req.email or "anonymous"
+    now = time.time()
+    _auth_attempts[key] = [t for t in _auth_attempts[key] if now - t < _AUTH_WINDOW]
+    if len(_auth_attempts[key]) >= _MAX_AUTH_ATTEMPTS:
+        raise HTTPException(status_code=429, detail="Too many auth attempts. Try again later.")
+    _auth_attempts[key].append(now)
+
     email = verify_token(req.password, req.email)
     if email:
         return TokenResponse(token=req.password, email=email)
@@ -117,7 +157,7 @@ async def chat(req: ChatRequest, user: str = Depends(get_current_user)):
     # Get or create conversation
     if req.chat_id:
         conv = get_conversation(req.chat_id)
-        if not conv:
+        if not conv or conv["user_email"] != email:
             raise HTTPException(status_code=404, detail="Conversation not found")
         chat_id = req.chat_id
     else:

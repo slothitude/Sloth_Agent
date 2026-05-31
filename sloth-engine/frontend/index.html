@@ -569,7 +569,7 @@ let fullResponse = '';
 
 // ═══ Init ═══
 (async function init() {
-  marked.setOptions({ breaks: true, gfm: true });
+  marked.setOptions({ breaks: true, gfm: true, sanitize: true });
   if (authToken) {
     await loadProjects();
     loadChats();
@@ -767,7 +767,10 @@ async function sendMessage() {
             case 'image':
               const imgEl = document.createElement('div');
               imgEl.className = 'generated-image';
-              imgEl.innerHTML = `<img src="${API_BASE}${event.url}" alt="${escapeHtml(event.prompt || 'Generated image')}" loading="lazy" /><div class="img-caption">${escapeHtml(event.prompt || 'Generated image')}</div>`;
+              const safeImgUrl = sanitizeUrl(API_BASE + event.url);
+              if (safeImgUrl) {
+                imgEl.innerHTML = `<img src="${safeImgUrl}" alt="${escapeHtml(event.prompt || 'Generated image')}" loading="lazy" /><div class="img-caption">${escapeHtml(event.prompt || 'Generated image')}</div>`;
+              }
               bubble.appendChild(imgEl);
               currentContent += `\n\n![${event.prompt || 'image'}](${event.url})`;
               fullResponse += `\n\n![${event.prompt || 'image'}](${event.url})`;
@@ -776,7 +779,10 @@ async function sendMessage() {
             case 'artifact':
               const artEl = document.createElement('div');
               artEl.className = 'artifact-embed';
-              artEl.innerHTML = `<div class="artifact-header">${escapeHtml(event.title || 'Artifact')}</div><iframe src="${API_BASE}${event.url}" sandbox="allow-scripts" loading="lazy"></iframe>`;
+              const safeArtUrl = sanitizeUrl(API_BASE + event.url);
+              if (safeArtUrl) {
+                artEl.innerHTML = `<div class="artifact-header">${escapeHtml(event.title || 'Artifact')}</div><iframe src="${safeArtUrl}" sandbox="allow-scripts" loading="lazy"></iframe>`;
+              }
               bubble.appendChild(artEl);
               currentContent += `\n\n[${event.title || 'Artifact'}](${event.url})`;
               fullResponse += `\n\n[${event.title || 'Artifact'}](${event.url})`;
@@ -785,10 +791,11 @@ async function sendMessage() {
             case 'video':
               const vidEl = document.createElement('div');
               vidEl.className = 'video-embed';
-              if (event.video_type === 'youtube') {
-                vidEl.innerHTML = `<iframe src="${event.embed_url}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>`;
-              } else {
-                vidEl.innerHTML = `<video controls preload="metadata" src="${event.embed_url}" style="width:100%;max-height:400px"></video>`;
+              const safeVidUrl = sanitizeUrl(event.embed_url);
+              if (event.video_type === 'youtube' && safeVidUrl) {
+                vidEl.innerHTML = `<iframe src="${safeVidUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>`;
+              } else if (safeVidUrl) {
+                vidEl.innerHTML = `<video controls preload="metadata" src="${safeVidUrl}" style="width:100%;max-height:400px"></video>`;
               }
               bubble.appendChild(vidEl);
               currentContent += `\n\n[Video: ${event.query || 'video'}](${event.embed_url})`;
@@ -844,7 +851,7 @@ function renderMarkdown(text) {
   if (!text) return '';
   // Process Godot artifacts
   let html = text.replace(/\[GODOT_ARTIFACT\](.*?)\[\/GODOT_ARTIFACT\]/g,
-    '<div class="godot-artifact"><iframe src="$1" allow="fullscreen"></iframe></div>');
+    (_, url) => { const s = sanitizeUrl(url); return s ? `<div class="godot-artifact"><iframe src="${s}" sandbox="allow-scripts" allow="fullscreen"></iframe></div>` : ''; });
   return marked.parse(html);
 }
 
@@ -872,6 +879,18 @@ function escapeHtml(text) {
   const el = document.createElement('div');
   el.textContent = text;
   return el.innerHTML;
+}
+
+function sanitizeUrl(url) {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return '';
+    // Block private/internal addresses
+    const host = parsed.hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.local')) return '';
+    if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.|0\.)/.test(host)) return '';
+    return parsed.href;
+  } catch { return ''; }
 }
 
 function scrollBottom() {

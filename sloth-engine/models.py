@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 # ── Chat ───────────────────────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(..., max_length=50000)
     chat_id: Optional[int] = None
     project_id: Optional[int] = None
     model: Optional[str] = None

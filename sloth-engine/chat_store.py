@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from config import DB_PATH
@@ -12,6 +12,8 @@ from config import DB_PATH
 def init_db():
     with sqlite3.connect(DB_PATH) as db:
         db.execute("PRAGMA foreign_keys = ON")
+        db.execute("PRAGMA journal_mode = WAL")
+        db.execute("PRAGMA busy_timeout = 5000")
         db.executescript("""
             CREATE TABLE IF NOT EXISTS projects (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,7 +61,7 @@ def create_project(user_email: str, name: str, description: str = "", working_di
         db.commit()
         return dict(id=cur.lastrowid, user_email=user_email, name=name,
                      description=description, working_dir=working_dir,
-                     created_at=datetime.utcnow().isoformat())
+                     created_at=datetime.now(timezone.utc).isoformat())
 
 
 def list_projects(user_email: str) -> list[dict]:
@@ -104,7 +106,7 @@ def create_conversation(user_email: str, project_id: Optional[int] = None, title
         db.commit()
         return dict(id=cur.lastrowid, project_id=project_id or 0,
                      user_email=user_email, title=title,
-                     created_at=datetime.utcnow().isoformat())
+                     created_at=datetime.now(timezone.utc).isoformat())
 
 
 def list_conversations(user_email: str, project_id: Optional[int] = None, limit: int = 50) -> list[dict]:

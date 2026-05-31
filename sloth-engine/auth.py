@@ -2,29 +2,39 @@
 
 from __future__ import annotations
 
-import hashlib
-import hmac
 import sqlite3
 from typing import Optional
 
+import bcrypt
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from config import API_KEY_SALT, ADMIN_TOKEN, DB_PATH
+from config import ADMIN_TOKEN, DB_PATH
 
 security = HTTPBearer(auto_error=False)
 
 
 def _hash_token(email: str, token: str) -> str:
-    return hmac.new(
-        API_KEY_SALT.encode(),
+    return bcrypt.hashpw(
         f"{email}:{token}".encode(),
-        hashlib.sha256,
-    ).hexdigest()
+        bcrypt.gensalt(rounds=12),
+    ).decode()
+
+
+def _check_token(email: str, token: str, token_hash: str) -> bool:
+    try:
+        return bcrypt.checkpw(
+            f"{email}:{token}".encode(),
+            token_hash.encode(),
+        )
+    except (ValueError, TypeError):
+        return False
 
 
 def init_auth_db():
     with sqlite3.connect(DB_PATH) as db:
+        db.execute("PRAGMA journal_mode = WAL")
+        db.execute("PRAGMA busy_timeout = 5000")
         db.execute(
             """CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,15 +68,13 @@ def verify_token(token: str, email: Optional[str] = None) -> Optional[str]:
             row = db.execute(
                 "SELECT token_hash FROM users WHERE email = ?", (email,)
             ).fetchone()
+            if row and _check_token(email, token, row[0]):
+                return email
         else:
-            # Search all users — hash is unique per email:token pair
             for row in db.execute("SELECT email, token_hash FROM users").fetchall():
-                if _hash_token(row[0], token) == row[1]:
+                if _check_token(row[0], token, row[1]):
                     return row[0]
-            return None
-        if row and row[0] == _hash_token(email, token):
-            return email
-    return None
+        return None
 
 
 def get_current_user(
