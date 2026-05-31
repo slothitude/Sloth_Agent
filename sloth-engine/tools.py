@@ -764,6 +764,75 @@ TOOL_SCHEMAS = [
         },
     },
 
+    # --- Agentic Build Methodology ---
+    {
+        "type": "function",
+        "function": {
+            "name": "plan_create",
+            "description": "Create a structured plan with ordered steps for a build task. Sets the first step active. Provide project context (build/test/lint commands) for automated verification.",
+            "parameters": {"type": "object", "properties": {
+                "project_id": {"type": "integer", "description": "Project ID"},
+                "plan_name": {"type": "string", "description": "Plan name"},
+                "steps": {"type": "string", "description": "JSON array of {\"title\": \"...\", \"description\": \"...\"}"},
+                "build_cmd": {"type": "string", "default": "", "description": "Build command (e.g. 'npm run build')"},
+                "test_cmd": {"type": "string", "default": "", "description": "Test command (e.g. 'npm test')"},
+                "lint_cmd": {"type": "string", "default": "", "description": "Lint command (e.g. 'npm run lint')"},
+                "repo_root": {"type": "string", "default": "", "description": "Repository root directory"},
+                "language": {"type": "string", "default": "", "description": "Programming language"},
+                "framework": {"type": "string", "default": "", "description": "Framework (e.g. React, Flask)"},
+            }, "required": ["project_id", "plan_name", "steps"]},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "todo_next",
+            "description": "Get the current active step. Returns step title, description, project context, retry count, and accumulated errors. If no active step, returns 'all done' summary.",
+            "parameters": {"type": "object", "properties": {
+                "project_id": {"type": "integer", "description": "Project ID"},
+            }, "required": ["project_id"]},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "todo_complete",
+            "description": "Mark the current active step as done and auto-advance to the next pending step. Call this after verifying a step passed.",
+            "parameters": {"type": "object", "properties": {
+                "project_id": {"type": "integer", "description": "Project ID"},
+                "result": {"type": "string", "default": "", "description": "Summary of what was accomplished"},
+            }, "required": ["project_id"]},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "todo_fail",
+            "description": "Mark the current active step as failed. If retry=true, keeps the step active with error appended for next attempt. Max 3 retries per step. If retry=false, marks failed and advances to next step.",
+            "parameters": {"type": "object", "properties": {
+                "project_id": {"type": "integer", "description": "Project ID"},
+                "error": {"type": "string", "default": "", "description": "What went wrong"},
+                "retry": {"type": "boolean", "default": True, "description": "Whether to retry the step"},
+            }, "required": ["project_id"]},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "project_context",
+            "description": "Set or get project build context (build_cmd, test_cmd, lint_cmd, repo_root, language, framework). If no args provided, returns current context.",
+            "parameters": {"type": "object", "properties": {
+                "project_id": {"type": "integer", "description": "Project ID"},
+                "build_cmd": {"type": "string", "default": ""},
+                "test_cmd": {"type": "string", "default": ""},
+                "lint_cmd": {"type": "string", "default": ""},
+                "repo_root": {"type": "string", "default": ""},
+                "language": {"type": "string", "default": ""},
+                "framework": {"type": "string", "default": ""},
+            }, "required": ["project_id"]},
+        },
+    },
+
     # --- Thinking ---
     {
         "type": "function",
@@ -931,6 +1000,11 @@ TOOL_DISPATCH = {
     "media_stack_status": "execute_media_stack_status",
     "vpn_status": "execute_vpn_status",
     "thinking_log": "execute_thinking_log",
+    "plan_create": "execute_plan_create",
+    "todo_next": "execute_todo_next",
+    "todo_complete": "execute_todo_complete",
+    "todo_fail": "execute_todo_fail",
+    "project_context": "execute_project_context",
     "render_component": "execute_render_component",
     "gs_health": "execute_gs_health",
     "gs_state": "execute_gs_state",

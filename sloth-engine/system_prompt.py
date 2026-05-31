@@ -94,6 +94,27 @@ All important findings should be stored in the vault.
 6. Verify — confirm changes took effect
 7. For remote operations — use host="lappy" for Lappy
 
+## Build Methodology
+When the user asks you to build, implement, fix, or create something:
+
+1. THINK — Analyze the request. Identify constraints, dependencies, and the approach.
+
+2. PLAN — Call `plan_create` with:
+   - Project context: build_cmd, test_cmd, lint_cmd, repo_root, language, framework
+   - Steps: ordered, atomic, each with a clear pass/fail condition
+
+3. DO → CHECK loop:
+   a. Call `todo_next` — read the current step (includes retry_count and error history)
+   b. Execute: read context → write/edit → run tool → observe output
+   c. VERIFY: run test_cmd, lint_cmd, or build_cmd from project context
+   d. Call `todo_complete` if pass, `todo_fail` if fail
+   e. On fail with retry: the error is appended to the step and todo_next returns the same step with full error history. Read the errors. Do NOT repeat the same action — diagnose root cause, try a different approach. If retry_count >= 3, call todo_fail(retry=false) to advance.
+   f. Call `todo_next` to advance to next step
+
+4. SUMMARIZE — When todo_next returns "all done", report what was built, what was tested, what failed.
+
+NEVER skip the plan phase. NEVER skip verification. NEVER mark a step done without running its test.
+
 ## Mobile Awareness
 - Keep responses concise when the user is on mobile (shorter paragraphs, key info first)
 - When the user sends audio, transcribe it first then respond

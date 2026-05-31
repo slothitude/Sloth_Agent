@@ -1208,3 +1208,129 @@ async def execute_write_scene(tscn_content: str, path: str = "/tmp/scene.tscn") 
 async def execute_open_scene(path: str) -> str:
     result = await gs_open_scene(path)
     return json.dumps(result)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Agentic Build Methodology
+# ═══════════════════════════════════════════════════════════════════════════
+
+def execute_plan_create(project_id: int, plan_name: str, steps: str,
+                        build_cmd: str = "", test_cmd: str = "", lint_cmd: str = "",
+                        repo_root: str = "", language: str = "", framework: str = "") -> str:
+    """Create a plan from a JSON array of steps."""
+    import chat_store
+    try:
+        step_list = json.loads(steps)
+        if not isinstance(step_list, list) or not step_list:
+            return "Error: steps must be a non-empty JSON array of {title, description}"
+    except (json.JSONDecodeError, TypeError) as e:
+        return f"Error: invalid steps JSON: {e}"
+
+    # Validate project exists
+    proj = chat_store.get_project(project_id)
+    if not proj:
+        return f"Error: Project {project_id} not found"
+
+    result = chat_store.create_plan(
+        project_id, plan_name, step_list,
+        build_cmd=build_cmd, test_cmd=test_cmd, lint_cmd=lint_cmd,
+        repo_root=repo_root, language=language, framework=framework,
+    )
+    return json.dumps({"status": "created", "plan_name": plan_name, "total_steps": result["total_steps"],
+                      "message": f"Plan '{plan_name}' created with {result['total_steps']} steps. First step is now active. Use todo_next to begin."})
+
+
+def execute_todo_next(project_id: int) -> str:
+    """Get the current active step, or summary if all done."""
+    import chat_store
+    step = chat_store.get_active_step(project_id)
+    if not step:
+        summary = chat_store.get_plan_summary(project_id)
+        if summary.get("plan") is None:
+            return json.dumps({"status": "no_plan", "message": "No active plan for this project. Use plan_create to start."})
+        return json.dumps({
+            "status": "complete",
+            "message": "All steps complete",
+            "summary": {
+                "plan_name": summary["plan_name"],
+                "total": summary["total"],
+                "done": summary["done"],
+                "failed": summary["failed"],
+            },
+            "steps": summary["steps"],
+        })
+    return json.dumps({"status": "active", **step})
+
+
+def execute_todo_complete(project_id: int, result: str = "") -> str:
+    """Mark active step done, advance to next."""
+    import chat_store
+    completed = chat_store.get_active_step(project_id)
+    if not completed:
+        return json.dumps({"status": "no_active", "message": "No active step to complete"})
+    next_step = chat_store.complete_step(project_id, result=result)
+    if next_step:
+        return json.dumps({
+            "status": "next",
+            "completed": completed["title"],
+            "next_step": next_step,
+            "message": f"Step '{completed['title']}' completed. Next: '{next_step['title']}'",
+        })
+    return json.dumps({
+        "status": "plan_complete",
+        "completed": completed["title"],
+        "message": f"Step '{completed['title']}' was the last step. Plan complete!",
+    })
+
+
+def execute_todo_fail(project_id: int, error: str = "", retry: bool = True) -> str:
+    """Mark active step as failed, optionally retry."""
+    import chat_store
+    current = chat_store.get_active_step(project_id)
+    if not current:
+        return json.dumps({"status": "no_active", "message": "No active step to fail"})
+    next_step = chat_store.fail_step(project_id, error=error, retry=retry)
+    if next_step and next_step.get("id") == current.get("id"):
+        # Same step returned — it's a retry
+        return json.dumps({
+            "status": "retry",
+            "step": next_step["title"],
+            "retry_count": next_step["retry_count"],
+            "error": next_step["error"],
+            "message": f"Step '{next_step['title']}' failed (attempt {next_step['retry_count']}/3). Error appended. Try a different approach.",
+        })
+    if next_step:
+        return json.dumps({
+            "status": "skipped",
+            "failed": current["title"],
+            "next_step": next_step,
+            "message": f"Step '{current['title']}' failed after max retries. Moving to: '{next_step['title']}'",
+        })
+    return json.dumps({
+        "status": "plan_complete",
+        "failed": current["title"],
+        "message": f"Step '{current['title']}' was the last step and it failed. Plan complete (with failures).",
+    })
+
+
+def execute_project_context(project_id: int, build_cmd: str = "", test_cmd: str = "",
+                             lint_cmd: str = "", repo_root: str = "", language: str = "",
+                             framework: str = "") -> str:
+    """Set or get project build context."""
+    import chat_store
+    proj = chat_store.get_project(project_id)
+    if not proj:
+        return f"Error: Project {project_id} not found"
+    # If any args provided, update
+    kwargs = {}
+    if build_cmd: kwargs["build_cmd"] = build_cmd
+    if test_cmd: kwargs["test_cmd"] = test_cmd
+    if lint_cmd: kwargs["lint_cmd"] = lint_cmd
+    if repo_root: kwargs["repo_root"] = repo_root
+    if language: kwargs["language"] = language
+    if framework: kwargs["framework"] = framework
+    if kwargs:
+        return chat_store.set_project_context(project_id, **kwargs)
+    # Otherwise return current context
+    ctx = chat_store.get_project_context(project_id)
+    return json.dumps({"project_id": project_id, "context": ctx or {}})
