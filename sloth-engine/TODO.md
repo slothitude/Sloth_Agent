@@ -31,7 +31,7 @@
 - [x] Sub-agents — vault/agents/*.md recursive delegation (3 agents)
 - [x] Telegram bridge update instructions — telegram_update.py
 - [x] GodotStrap client — render, events, screenshot, scene management
-- [ ] Chat auto-logging — save to vault/chats/{user}/{date}-{slug}.md after each completion
+- [x] Chat auto-logging — save to vault/chats/{user}/{date}-{slug}.md after each completion
 - [ ] Ollama client (optional) — local model fallback
 - [ ] Wire Telegram bridge to new engine (`http://localhost:3001/api/chat`)
 - [ ] Media-stack MCP integration — Radarr/Sonarr/qBittorrent/VPN/Jellyseerr tools (search, downloads, requests, queue, torrent management)
@@ -87,8 +87,8 @@
 
 ## Known Issues
 - [ ] `fetch_url` — connection reset on some sites (WinError 10054)
-- [ ] `delegate_to` — `asyncio.get_event_loop()` may conflict with FastAPI
+- [x] `delegate_to` — fixed: ThreadPoolExecutor + asyncio.run
 - [ ] Lappy system env var `ZAI_API_KEY` has old broken key (start.bat overrides)
-- [ ] No rate limiting on chat endpoint
+- [x] No rate limiting on chat endpoint — fixed: auth rate limiter added
 - [ ] No conversation title editing from frontend
 - [ ] No PWA manifest.json / service worker

@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
-from config import HOST, PORT, DEBUG, DEFAULT_MODEL, FRONTEND_DIR, DB_PATH, DATA_DIR
+from config import HOST, PORT, DEBUG, DEFAULT_MODEL, FRONTEND_DIR, DB_PATH, DATA_DIR, VAULT_DIR
 from models import ChatRequest, ProjectCreate, TokenRequest, TokenResponse
 from auth import init_auth_db, get_current_user, create_user, verify_token
 from chat_store import (
@@ -147,6 +147,69 @@ async def create_token(req: TokenRequest):
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 
+# ── Chat Logging ──────────────────────────────────────────────────────────
+
+def _log_chat_to_vault(email: str, title: str, chat_id: int, model: str, tools_used: list[str]):
+    """Save conversation log to vault/chats/{user}/{date}-{slug}.md."""
+    import re as _re
+    try:
+        chats_dir = VAULT_DIR / "chats" / email
+        chats_dir.mkdir(parents=True, exist_ok=True)
+
+        # Get messages from DB
+        messages = get_messages(chat_id)
+        if not messages:
+            return
+
+        # Build slug from title
+        slug = _re.sub(r"[^\w\s-]", "", title.lower()).strip()[:50] or "untitled"
+        slug = _re.sub(r"[\s]+", "-", slug).strip("-")
+
+        # Check for existing files with same slug today, add suffix
+        today = time.strftime("%Y-%m-%d")
+        date_slug = f"{today}-{slug}"
+        if (chats_dir / f"{date_slug}.md").exists():
+            i = 1
+            while (chats_dir / f"{date_slug}-{i}.md").exists():
+                i += 1
+            date_slug = f"{date_slug}-{i}"
+
+        now = time.strftime("%Y-%m-%d %H:%M:%S")
+        msg_count = len(messages)
+
+        # Build markdown
+        lines = [
+            "---",
+            f'created: "{now}"',
+            f'updated: "{now}"',
+            f"tags: [chat, {email}]",
+            f"user: \"{email}\"",
+            f'model: "{model}"',
+            f"chat_id: \"{chat_id}\"",
+            f"tool_calls: {json.dumps(tools_used)}",
+            f"message_count: {msg_count}",
+            "---",
+            "",
+            f"# {title}",
+            "",
+            f"> {email} · {now} · {model}",
+            "",
+            "## Messages",
+            "",
+        ]
+        for m in messages:
+            role = m["role"].capitalize()
+            lines.append(f"### {role}")
+            lines.append("")
+            lines.append(m.get("content", ""))
+            lines.append("")
+
+        content = "\n".join(lines)
+        (chats_dir / f"{date_slug}.md").write_text(content, encoding="utf-8")
+    except Exception:
+        pass  # Logging failure should never break chat
+
+
 # ── Chat (SSE Streaming) ──────────────────────────────────────────────────
 
 @app.post("/api/chat")
@@ -259,6 +322,10 @@ async def chat(req: ChatRequest, user: str = Depends(get_current_user)):
             if tool_names_used:
                 meta = f"\n\n[Tools used: {', '.join(tool_names_used)}]"
             add_message(chat_id, "assistant", full_content + meta)
+
+        # Log chat to vault
+        conv = get_conversation(chat_id)
+        _log_chat_to_vault(email, conv["title"] if conv else "untitled", chat_id, model, tool_names_used)
 
         # Signal done
         yield f"data: {json.dumps({'type': 'done', 'chat_id': chat_id, 'content': full_content})}\n\n"
