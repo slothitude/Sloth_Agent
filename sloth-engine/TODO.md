@@ -67,6 +67,9 @@
 - [ ] Update Traefik routes — point :3000 → sloth-engine :3001
 - [ ] Delete old sloth-agent code from D:/Sloth_Agent/ (keep vault/, audio-stack Docker)
 
+## Mobile UX
+- [ ] Toast/notification system — mobile-friendly inline toasts for errors, status updates, tool confirmations
+
 ## Bugs Fixed This Session
 - [x] `dispatch_tool` not wired to `chat_with_tools()` — "No dispatch function configured"
 - [x] `dispatch_fn` returned coroutine — always `await` now
