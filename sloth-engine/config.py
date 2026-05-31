@@ -12,6 +12,12 @@ FRONTEND_DIR = BASE_DIR / "frontend"
 VAULT_DIR.mkdir(exist_ok=True)
 DATA_DIR.mkdir(exist_ok=True)
 
+WORKSPACE_DIR = VAULT_DIR / "workspace"
+WORKSPACE_DIR.mkdir(exist_ok=True)
+
+# Workspace files that must exist to skip bootstrap
+WORKSPACE_FILES = ["soul.md", "identity.md", "user.md"]
+
 DB_PATH = DATA_DIR / "sloth_engine.db"
 
 # ── Server ─────────────────────────────────────────────────────────────────

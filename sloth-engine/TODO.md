@@ -34,24 +34,24 @@
 - [x] Chat auto-logging — save to vault/chats/{user}/{date}-{slug}.md after each completion
 - [ ] Ollama client (optional) — local model fallback
 - [ ] Wire Telegram bridge to new engine (`http://localhost:3001/api/chat`)
-- [ ] Media-stack MCP integration — Radarr/Sonarr/qBittorrent/VPN/Jellyseerr tools (search, downloads, requests, queue, torrent management)
-- [ ] YouTube/VLC player integration — YouTube search + play, video URL play, VLC controls (play/pause/seek/volume/playlist)
+- [x] Media-stack MCP integration — Radarr/Sonarr/qBittorrent/VPN/Jellyseerr tools (search, downloads, requests, queue, torrent management)
+- [x] YouTube/VLC player integration — YouTube search + play, video URL play, VLC controls (play/pause/seek/volume/playlist)
 
-## Media-Stack Tools (to add from mcp__media-stack__)
-- [ ] media_control — unified search/browse/download/status/pause/resume/bump/restart
-- [ ] media_search — Jellyfin library search with direct-play links
-- [ ] media_request — request movie/TV via Jellyseerr (TMDb ID)
-- [ ] media_requests — list pending/approved requests
-- [ ] radarr_movies / radarr_queue — list movies and download queue
-- [ ] sonarr_series / sonarr_queue — list series and download queue
-- [ ] torrents_list / torrents_action — qBittorrent torrent management
-- [ ] vpn_status — Gluetun VPN connection check
-- [ ] stack_status — Docker container health check
+## Media-Stack Tools (implemented via Alphabetty MCP wrappers)
+- [x] media_control — unified search/browse/download/status/pause/resume/bump/restart
+- [x] media_search — Jellyfin library search with direct-play links
+- [x] media_request — request movie/TV via Jellyseerr (TMDb ID)
+- [x] media_requests — list pending/approved requests
+- [x] radarr_movies / radarr_queue — list movies and download queue
+- [x] sonarr_series / sonarr_queue — list series and download queue
+- [x] torrents_list / torrents_action — qBittorrent torrent management
+- [x] vpn_status — Gluetun VPN connection check
+- [x] stack_status — Docker container health check
 
-## VLC/YouTube Tools (to add)
-- [ ] youtube_play — search YouTube and navigate to first result
-- [ ] play_video — play video URL via yt-dlp
-- [ ] vlc controls — launch, play, pause, stop, next, prev, seek, volume, playlist, loop, shuffle, fullscreen
+## VLC/YouTube Tools (implemented via Alphabetty MCP wrappers)
+- [x] youtube_play — search YouTube and navigate to first result
+- [x] play_video — play video URL via yt-dlp
+- [x] vlc controls — launch, play, pause, stop, next, prev, seek, volume, playlist, loop, shuffle, fullscreen
 
 ## Phase 4: Cleanup & Deploy
 - [x] requirements.txt

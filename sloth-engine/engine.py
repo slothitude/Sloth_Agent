@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
-from config import HOST, PORT, DEBUG, DEFAULT_MODEL, FRONTEND_DIR, DB_PATH, DATA_DIR, VAULT_DIR
+from config import HOST, PORT, DEBUG, DEFAULT_MODEL, FRONTEND_DIR, DB_PATH, DATA_DIR, VAULT_DIR, WORKSPACE_DIR, WORKSPACE_FILES
 from models import ChatRequest, ProjectCreate, TokenRequest, TokenResponse
 from auth import init_auth_db, get_current_user, create_user, verify_token
 from chat_store import (
@@ -24,9 +24,23 @@ from chat_store import (
     create_conversation, list_conversations, get_conversation, update_conversation_title,
     delete_conversation, add_message, get_messages, get_messages_for_llm,
 )
-from system_prompt import SYSTEM_PROMPT
+from system_prompt import SYSTEM_PROMPT, BOOTSTRAP_PROMPT
 from tools import get_all_schemas, dispatch_tool
 from zai_client import chat_with_tools
+
+
+def _load_workspace_section(filename: str) -> str:
+    """Load a workspace file content for system prompt injection."""
+    path = WORKSPACE_DIR / filename
+    if path.is_file():
+        return f"\n\n{path.read_text(encoding='utf-8')}"
+    return ""
+
+
+def _is_first_run() -> bool:
+    """True when all core workspace files are missing (bootstrap needed)."""
+    return not any((WORKSPACE_DIR / f).exists() for f in WORKSPACE_FILES)
+
 
 # ── App ────────────────────────────────────────────────────────────────────
 
@@ -237,12 +251,19 @@ async def chat(req: ChatRequest, user: str = Depends(get_current_user)):
 
     # Build messages for LLM
     history = get_messages_for_llm(chat_id)
-    # Build system prompt with project context
+    # Build system prompt with bootstrap + workspace files + project context
     sys_content = SYSTEM_PROMPT
+    if _is_first_run():
+        sys_content += "\n\n" + BOOTSTRAP_PROMPT
+    sys_content += _load_workspace_section("soul.md")
+    sys_content += _load_workspace_section("identity.md")
+    sys_content += _load_workspace_section("user.md")
     if req.project_id:
         proj = get_project(req.project_id)
         if proj:
             sys_content += f"\n\n## Current Project\n- Name: {proj['name']}\n- Description: {proj['description']}\n- Working Dir: {proj['working_dir']}\n"
+
+    sys_content += _load_workspace_section("heartbeat.md")
 
     messages = [{"role": "system", "content": sys_content}]
     messages.extend(history)
@@ -400,6 +421,21 @@ async def api_models():
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "version": "1.0.0"}
+
+
+@app.post("/api/heartbeat")
+async def heartbeat(user: str = Depends(get_current_user)):
+    heartbeat_content = _load_workspace_section("heartbeat.md")
+    sys_prompt = "You are Sloth on a heartbeat tick. Follow HEARTBEAT.md strictly. If nothing needs attention, reply with exactly: HEARTBEAT_OK. No other text."
+    sys_prompt += heartbeat_content
+    messages = [{"role": "system", "content": sys_prompt}]
+    result = ""
+    async for event in chat_with_tools(messages, [], DEFAULT_MODEL):
+        if event["type"] == "token":
+            result += event["content"]
+    if "HEARTBEAT_OK" in result.strip():
+        return {"status": "ok", "action": "none"}
+    return {"status": "action", "message": result.strip()}
 
 
 # ── Run ───────────────────────────────────────────────────────────────────
